@@ -136,6 +136,18 @@ const counts = {
 console.log('sanity:', JSON.stringify(counts));
 if (counts.leafSpans < 30 || counts.keywordUnderline < 3) { console.log('SANITY FAIL'); fail = true; }
 
+/* 目录：toc 为 none 的主题（拙知）不输出目录；其他主题照常输出 */
+const tocNoneSpecs = Themes.SPECS.filter(function (item) { return item.toc === 'none'; });
+const tocNoneOk = tocNoneSpecs.length >= 1
+  && tocNoneSpecs.some(function (item) { return item.id === 'zhuozhi'; })
+  && tocNoneSpecs.every(function (item) { return Themes.render(tokens, item, { author: '张三' }).indexOf('CONTENTS · 本章导览') === -1; })
+  && Themes.COMPONENTS.buildToc(Themes.getSpec('zhuozhi'), ['甲', '乙'], 2) === ''
+  && Themes.SPECS.filter(function (item) { return item.toc !== 'none' && item.group !== 'original'; }).every(function (item) {
+    return Themes.render(tokens, item, { author: '张三' }).indexOf('CONTENTS · 本章导览') !== -1;
+  });
+console.log('toc-none ' + (tocNoneOk ? 'PASS' : 'FAIL') + ' themes=' + tocNoneSpecs.map(function (item) { return item.id; }).join(','));
+if (!tocNoneOk) fail = true;
+
 /* 无 H1 / 空输入兜底 */
 const bare = Themes.render(Converter.parse('只有一段正文，**测试**兜底。'), Themes.getSpec('sakura'), {});
 const bareOk = Validator.validate(bare).ok;

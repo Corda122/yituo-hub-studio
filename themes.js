@@ -265,6 +265,7 @@
 
   /* 目录 = 刊头行 + PART 卡片（首张实色）/ 列表 */
   function buildToc(spec, titles, parts) {
+    if (spec.toc === 'none') return '';
     if (!titles || titles.length === 0) return '';
     var h = '<section style="margin:26px 0;">'
       + '<section style="display:flex;align-items:center;justify-content:space-between;">'
@@ -575,7 +576,7 @@
       swatch: '#6E0B14',
       radius: '6px',
       underline: 'border-bottom:2px solid #6E0B14;font-weight:600;',
-      cover: 'minimal', sectionTitle: 'frame', quote: 'tint', toc: 'list', signature: 'seal', code: 'light',
+      cover: 'minimal', sectionTitle: 'frame', quote: 'tint', toc: 'none', signature: 'seal', code: 'light',
       sigName: '拙知',
       sigLines: ['深知己“拙”，仍愿求“知”。', '一位父亲，记录 AI、成长与家庭里的思考。'],
       c: { primary: '#131317', deep: '#131317', light: '#F3E7E7', tint: '#F0F0EE', ink: '#131317', text: '#2E2E33', sub: '#6B6B71', border: '#D9D9D6', accent: '#131317', coverA: '#131317', coverB: '#131317', codeBg: '#F0F0EE', seal: '#6E0B14', sealText: '#FDFDFD' }
