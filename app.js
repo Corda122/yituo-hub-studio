@@ -26,7 +26,7 @@
   var previewWidth = 'fit';
 
   var state = {
-    themeId: Themes.SPECS[0].id,
+    themeId: 'zhuozhi',
     library: 'base',
     group: 'all',
     levelId: 'motion-themed-frame',

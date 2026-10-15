@@ -165,6 +165,14 @@
   /* 章节 = 大编号 + PART 小字 + 标题 + 英文副标（编辑部网格） */
   function buildSectionTitle(spec, t) {
     var en = t.en || ('CHAPTER ' + t.num);
+    if (spec.sectionTitle === 'frame') {
+      return '<section style="margin:44px 0 20px;display:flex;align-items:center;">'
+        + '<section style="flex-shrink:0;width:38px;height:38px;box-sizing:border-box;border:3px solid ' + spec.c.ink + ';border-radius:8px;display:flex;align-items:center;justify-content:center;">'
+        + '<span style="font-size:15px;font-weight:800;color:' + spec.c.ink + ';letter-spacing:.5px;line-height:1;" leaf="">' + t.num + '</span></section>'
+        + '<section style="margin-left:12px;flex:1;">'
+        + '<p style="margin:0;font-size:18px;font-weight:800;color:' + spec.c.ink + ';line-height:1.4;">' + leaf(txt(t.title)) + '</p>'
+        + '</section></section>';
+    }
     if (spec.sectionTitle === 'pill') {
       return '<section style="margin:44px 0 22px;">'
         + '<section style="display:flex;align-items:flex-start;">'
@@ -401,6 +409,23 @@
 
   /* 签名 = ABOUT 刊头 + 发丝线卡片 */
   function buildSignature(spec, t) {
+    if (spec.signature === 'seal') {
+      var sealBg = spec.c.seal || spec.c.accent;
+      var sealFg = spec.c.sealText || '#FFFFFF';
+      var sealFont = 'font-family:\'Songti SC\',STSong,SimSun,serif;';
+      var lines = spec.sigLines || [];
+      var sh = '<section style="display:flex;align-items:center;border-top:1px solid ' + spec.c.border + ';margin:36px 0 10px;padding-top:18px;">'
+        + '<section style="flex-shrink:0;width:48px;height:48px;box-sizing:border-box;background:' + sealBg + ';border-radius:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;">'
+        + '<p style="margin:0;font-size:17px;line-height:1.1;font-weight:700;color:' + sealFg + ';' + sealFont + '">' + leaf('拙') + '</p>'
+        + '<p style="margin:0;font-size:17px;line-height:1.1;font-weight:700;color:' + sealFg + ';' + sealFont + '">' + leaf('知') + '</p>'
+        + '</section>'
+        + '<section style="margin-left:14px;flex:1;">'
+        + '<p style="margin:0;font-size:15px;font-weight:800;color:' + spec.c.ink + ';line-height:1.5;">' + leaf(esc(spec.sigName || spec.name)) + '</p>';
+      for (var li = 0; li < lines.length; li++) {
+        sh += '<p style="margin:' + (li === 0 ? '4px' : '0') + ' 0 0;font-size:13.5px;line-height:1.75;color:' + (li === 0 ? spec.c.text : spec.c.sub) + ';">' + leaf(esc(lines[li])) + '</p>';
+      }
+      return sh + '</section></section>';
+    }
     var dark = spec.sigDark === true;
     var boxBg = dark ? spec.c.ink : '#FFFFFF';
     var boxBorder = dark ? spec.c.ink : spec.c.border;
@@ -542,6 +567,18 @@
       underline: 'border-bottom:2px solid #FBCFE8;font-weight:600;',
       cover: 'full', sectionTitle: 'pill', quote: 'gradient', toc: 'cards', signature: 'card', code: 'light',
       c: { primary: '#DB2777', deep: '#9D174D', light: '#FBCFE8', tint: '#FDF2F8', ink: '#1F1723', text: '#4A3B47', sub: '#B294A9', border: '#F1E2EA', accent: '#E11D48', coverA: '#EC4899', coverB: '#BE185D', codeBg: '#FDF2F8' }
+    },
+
+    {
+      id: 'zhuozhi', name: '拙知', en: '拙知', kickerZh: '观察与判断', group: 'editorial',
+      desc: '黑白为体 · 一印为用',
+      swatch: '#6E0B14',
+      radius: '6px',
+      underline: 'border-bottom:2px solid #6E0B14;font-weight:600;',
+      cover: 'minimal', sectionTitle: 'frame', quote: 'tint', toc: 'list', signature: 'seal', code: 'light',
+      sigName: '拙知',
+      sigLines: ['深知己“拙”，仍愿求“知”。', '一位父亲，记录 AI、成长与家庭里的思考。'],
+      c: { primary: '#131317', deep: '#131317', light: '#F3E7E7', tint: '#F0F0EE', ink: '#131317', text: '#2E2E33', sub: '#6B6B71', border: '#D9D9D6', accent: '#131317', coverA: '#131317', coverB: '#131317', codeBg: '#F0F0EE', seal: '#6E0B14', sealText: '#FDFDFD' }
     },
 
     /* ---------- 经典复刻（gzh-design-skill） ---------- */

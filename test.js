@@ -72,7 +72,7 @@ const baseLibrary = Themes.LIBRARIES.find(function (library) { return library.id
 const originalLibrary = Themes.LIBRARIES.find(function (library) { return library.id === 'original'; });
 const baseThemeCount = Themes.SPECS.filter(function (spec) { return baseLibrary.groups.includes(spec.group); }).length;
 const originalThemeCount = Themes.SPECS.filter(function (spec) { return originalLibrary.groups.includes(spec.group); }).length;
-const librariesOk = baseThemeCount === 18 && originalThemeCount === 16
+const librariesOk = baseThemeCount === 19 && originalThemeCount === 16
   && originalLibrary.name === '高级排版' && originalLibrary.shortName === '高级排版'
   && baseLibrary.groups.every(function (group) { return !originalLibrary.groups.includes(group); });
 console.log('theme-libraries ' + (librariesOk ? 'PASS' : 'FAIL')
