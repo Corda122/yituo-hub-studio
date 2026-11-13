@@ -1,7 +1,7 @@
 # 嵌入接口 window.YituoStudio（Corda122 fork · zhuozhi 分支）
 
 给 AI 工作台「分发台」公众号页用：工作台把一拓同源嵌在 iframe 里，经这个接口驱动，不再隐藏一拓的编辑框、代点它的按钮。
-只调一拓自己的函数，排版、校验、复制、下载、长图逻辑都不变；参数不对一律抛 `Error('YituoStudio：…')`，不静默。
+只调一拓自己的函数，排版、校验、复制、下载、长图逻辑都不变；参数不对一律报 `Error('YituoStudio：…')`，不静默：返回 Promise 的方法 reject，其余（setWidth、onReady、onChange）同步抛。
 
 打开方式：`studio.html?embed=1`——`<html>` 加 `yt-embed`，只显示预览（站点顶栏、编辑栏、预览工具条、校验面板、页脚、提示条都隐藏），不载示例文章、不读 AI 创作交接稿。不带 `embed=1` 时一拓原样。
 

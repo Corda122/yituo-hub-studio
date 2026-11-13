@@ -62,6 +62,8 @@ async function open(query) {
   check('未知视觉等级抛错', !!e && /视觉等级/.test(e.message));
   e = await rejects(() => S.setMarkdown(42));
   check('setMarkdown 非字符串抛错', !!e && /字符串/.test(e.message));
+  let sync = null; try { S.setTheme('no-such-theme').catch(() => {}); } catch (x) { sync = x; }
+  check('返回 Promise 的方法参数不对时 reject、不同步抛（调用方 .catch 接得住）', sync === null);
 
   S.setWidth('402');
   check('setWidth(402) → 预览按 402 设备宽', S.getState().width === '402' && w.document.getElementById('previewWrap').classList.contains('device')

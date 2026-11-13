@@ -732,6 +732,8 @@
   var studioHooks = { ready: [], change: [] };
   var studioReady = false;
   function studioFail(message) { throw new Error('YituoStudio：' + message); }
+  /* 返回 Promise 的方法参数不对时 reject（不同步抛），调用方 .catch 能接住 */
+  function studioAsync(fn) { return function () { try { return fn.apply(null, arguments); } catch (error) { return Promise.reject(error); } }; }
   function studioState(result, error) {
     var spec = Themes.getSpec(state.themeId);
     return { themeId: state.themeId, themeName: spec.name, advanced: isOriginalSpec(spec), levelId: state.levelId,
@@ -750,14 +752,14 @@
   }
   window.YituoStudio = {
     version: 1,
-    setMarkdown: function (md) { if (typeof md !== 'string') studioFail('setMarkdown 需要字符串'); editor.value = md; return convert(); },
+    setMarkdown: studioAsync(function (md) { if (typeof md !== 'string') studioFail('setMarkdown 需要字符串'); editor.value = md; return convert(); }),
     getMarkdown: function () { return editor.value; },
     listThemes: function () {
       return Themes.SPECS.map(function (s) { return { id: s.id, name: s.name, desc: s.desc, group: s.group, swatch: s.swatch, library: libraryForTheme(s).id }; });
     },
     listLevels: function () { return OriginalData.LEVELS.map(function (l) { return { id: l.id, order: l.order, name: l.name, short: l.short, motion: l.motion !== 'none' }; }); },
     listColorways: function (themeId) { return (OriginalData.colorwaysForTheme(themeId || state.themeId) || []).map(function (c) { return { id: c.id, name: c.name }; }); },
-    setTheme: function (id, opts) {
+    setTheme: studioAsync(function (id, opts) {
       var spec = Themes.SPECS.filter(function (s) { return s.id === id; })[0];
       if (!spec) studioFail('没有主题「' + id + '」');
       opts = opts || {};
@@ -771,7 +773,7 @@
       if (typeof opts.motionEnabled === 'boolean') state.motionEnabled = opts.motionEnabled;
       renderPickerButtons(); renderLevelControls(); renderColorControls();
       return convert();
-    },
+    }),
     setWidth: function (value) {
       value = String(value);
       if (['fit', '375', '402', '440'].indexOf(value) === -1) studioFail('宽度只能是 fit / 375 / 402 / 440');
