@@ -726,3 +726,14 @@ body {
   .color-pop { left: 16px; right: 16px; top: calc(100% + 6px); width: auto; max-width: none; }
   .pop-grid { grid-template-columns: 1fr; }
 }
+
+/* ---------- 嵌入模式（?embed=1，Corda122 fork）：只留预览，由外层页面经 window.YituoStudio 驱动 ---------- */
+html.yt-embed, html.yt-embed body { height: 100%; margin: 0; background: transparent; }
+html.yt-embed body { display: block; overflow: hidden; min-height: 0; }
+html.yt-embed .topbar, html.yt-embed .foot, html.yt-embed .editor-pane, html.yt-embed .preview-pane > .pane-toolbar,
+html.yt-embed #validPanel, html.yt-embed #toast { display: none !important; }
+html.yt-embed .rise { animation: none !important; }
+html.yt-embed .workspace { display: block; height: 100%; min-height: 0; padding: 0; }
+html.yt-embed .pane { height: 100%; border: 0; border-radius: 0; background: transparent; }
+html.yt-embed .preview-wrap { height: 100%; background: transparent; scrollbar-width: thin; }
+html.yt-embed .preview-wrap #preview { box-shadow: none; }

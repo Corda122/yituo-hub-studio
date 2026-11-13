@@ -194,6 +194,7 @@
     result.warnings.forEach(function (message) { panelHtml += '<div class="warn">⚠ ' + message + '</div>'; });
     validPanel.innerHTML = panelHtml;
     validPanel.hidden = result.ok && !result.warnings.length;
+    emitStudio('change', studioState(result, null));
   }
 
   function renderFailure(error) {
@@ -214,6 +215,7 @@
         ? '当前是本地文件直开模式，请从页面下方提示进入本地测试地址。'
         : '高级排版资源暂时无法载入，请刷新后重试。')
       + '</section>', false);
+    emitStudio('change', studioState(null, message));
   }
 
   function ensureManifest() {
@@ -597,16 +599,16 @@
   }
 
   function copyToWechat() {
-    state.pending.then(function () {
-      if (!state.html) { toast('先粘贴一点内容再复制'); return; }
+    return state.pending.then(function () {
+      if (!state.html) { toast('先粘贴一点内容再复制'); return false; }
       var plain = new Blob([Converter.plainText(editor.value)], { type: 'text/plain' });
       var rich = new Blob([state.html], { type: 'text/html' });
       if (navigator.clipboard && window.ClipboardItem) {
-        navigator.clipboard.write([new ClipboardItem({ 'text/html': rich, 'text/plain': plain })])
-          .then(function () { toast('✓ 已复制，去公众号编辑器粘贴'); })
-          .catch(function () { fallbackCopy(); toast('✓ 已复制（兼容模式）'); });
-      } else { fallbackCopy(); toast('✓ 已复制（兼容模式）'); }
-    }).catch(function () { toast('高级排版尚未载入完成'); });
+        return navigator.clipboard.write([new ClipboardItem({ 'text/html': rich, 'text/plain': plain })])
+          .then(function () { toast('✓ 已复制，去公众号编辑器粘贴'); return true; })
+          .catch(function () { fallbackCopy(); toast('✓ 已复制（兼容模式）'); return 'fallback'; });
+      } else { fallbackCopy(); toast('✓ 已复制（兼容模式）'); return 'fallback'; }
+    }).catch(function () { toast('高级排版尚未载入完成'); return false; });
   }
 
   function exportName(extension) {
@@ -633,10 +635,12 @@
   }
 
   function download() {
-    state.pending.then(function () {
-      if (!state.html) { toast('先粘贴一点内容'); return; }
-      saveBlob(new Blob(['\ufeff' + state.html], { type: 'text/html;charset=utf-8' }), exportName('html'));
-    }).catch(function () { toast('高级排版尚未载入完成'); });
+    return state.pending.then(function () {
+      if (!state.html) { toast('先粘贴一点内容'); return null; }
+      var name = exportName('html');
+      saveBlob(new Blob(['\ufeff' + state.html], { type: 'text/html;charset=utf-8' }), name);
+      return name;
+    }).catch(function () { toast('高级排版尚未载入完成'); return null; });
   }
 
   function waitForPreviewAssets(doc) {
@@ -654,7 +658,8 @@
   }
 
   function exportLongImage() {
-    state.pending.then(function () {
+    var outcome = null;
+    return state.pending.then(function () {
       if (!state.html) { toast('先粘贴一点内容再导出'); return null; }
       if (typeof window.html2canvas !== 'function') throw new Error('长图导出组件未加载');
       var doc = preview.contentDocument;
@@ -687,15 +692,17 @@
         });
       }).then(function (blob) {
         if (!blob) throw new Error('浏览器未能编码 PNG');
-        saveBlob(blob, exportName('png'));
+        outcome = exportName('png');
+        saveBlob(blob, outcome);
         toast('✓ 长图已导出 PNG');
       });
     }).catch(function (error) {
-      toast(error && error.message ? error.message : '长图导出失败，请稍后重试');
+      outcome = new Error(error && error.message ? error.message : '长图导出失败，请稍后重试');
+      toast(outcome.message);
     }).finally(function () {
       exportImageBtn.disabled = false;
       exportImageBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg> 导出长图';
-    });
+    }).then(function () { if (outcome instanceof Error) throw outcome; return outcome; });
   }
 
   /* ---------- 事件 / 启动 ---------- */
@@ -719,12 +726,74 @@
   document.addEventListener('click', function () { closePicker(); closeLevelPicker(); closeColorPicker(); });
   document.addEventListener('keydown', function (event) { if (event.key === 'Escape') { closePicker(); closeLevelPicker(); closeColorPicker(); } });
 
+  /* ---------- 嵌入接口 window.YituoStudio（Corda122 fork：AI 工作台分发台用它驱动一拓，不再隐藏代点） ----------
+   * 只调一拓自己的函数，排版逻辑不变；参数不对一律抛错（不静默）。?embed=1：只显示预览，不载示例、不读交接稿、不弹提示。 */
+  var embedMode = /[?&]embed=1(&|$)/.test(location.search);
+  var studioHooks = { ready: [], change: [] };
+  var studioReady = false;
+  function studioFail(message) { throw new Error('YituoStudio：' + message); }
+  function studioState(result, error) {
+    var spec = Themes.getSpec(state.themeId);
+    return { themeId: state.themeId, themeName: spec.name, advanced: isOriginalSpec(spec), levelId: state.levelId,
+      colorId: state.colorId, motionEnabled: state.motionEnabled, width: previewWidth, author: authorInput.value,
+      html: state.html, error: error || null,
+      validation: result ? { ok: result.ok, errors: result.errors.slice(), warnings: result.warnings.slice() } : null };
+  }
+  function emitStudio(kind, payload) {
+    studioHooks[kind].slice().forEach(function (fn) { try { fn(payload); } catch (error) { console.error(error); } });
+  }
+  function onStudio(kind, fn) {
+    if (typeof fn !== 'function') studioFail('on' + kind + ' 需要函数');
+    studioHooks[kind].push(fn);
+    if (kind === 'ready' && studioReady) fn(studioState(Validator.validate(state.html), null));
+    return function () { studioHooks[kind] = studioHooks[kind].filter(function (x) { return x !== fn; }); };
+  }
+  window.YituoStudio = {
+    version: 1,
+    setMarkdown: function (md) { if (typeof md !== 'string') studioFail('setMarkdown 需要字符串'); editor.value = md; return convert(); },
+    getMarkdown: function () { return editor.value; },
+    listThemes: function () {
+      return Themes.SPECS.map(function (s) { return { id: s.id, name: s.name, desc: s.desc, group: s.group, swatch: s.swatch, library: libraryForTheme(s).id }; });
+    },
+    listLevels: function () { return OriginalData.LEVELS.map(function (l) { return { id: l.id, order: l.order, name: l.name, short: l.short, motion: l.motion !== 'none' }; }); },
+    listColorways: function (themeId) { return (OriginalData.colorwaysForTheme(themeId || state.themeId) || []).map(function (c) { return { id: c.id, name: c.name }; }); },
+    setTheme: function (id, opts) {
+      var spec = Themes.SPECS.filter(function (s) { return s.id === id; })[0];
+      if (!spec) studioFail('没有主题「' + id + '」');
+      opts = opts || {};
+      if (opts.levelId && !OriginalData.LEVELS.some(function (l) { return l.id === opts.levelId; })) studioFail('没有视觉等级「' + opts.levelId + '」');
+      var ways = OriginalData.colorwaysForTheme(spec.id) || [];
+      if (opts.colorId && opts.colorId !== 'default' && !ways.some(function (c) { return c.id === opts.colorId; })) studioFail('主题「' + spec.name + '」没有配色「' + opts.colorId + '」');
+      state.themeId = spec.id;
+      state.library = libraryForTheme(spec).id;
+      state.colorId = opts.colorId || 'default';
+      if (opts.levelId) state.levelId = opts.levelId;
+      if (typeof opts.motionEnabled === 'boolean') state.motionEnabled = opts.motionEnabled;
+      renderPickerButtons(); renderLevelControls(); renderColorControls();
+      return convert();
+    },
+    setWidth: function (value) {
+      value = String(value);
+      if (['fit', '375', '402', '440'].indexOf(value) === -1) studioFail('宽度只能是 fit / 375 / 402 / 440');
+      setPreviewWidth(value);
+    },
+    setAuthor: function (name) { authorInput.value = String(name == null ? '' : name).slice(0, 24); return convert(); },
+    getState: function () { return studioState(state.html ? Validator.validate(state.html) : null, null); },
+    getHtml: function () { return state.pending.then(function () { return state.html; }); },
+    copyToWechat: copyToWechat,
+    downloadHtml: download,
+    exportImage: exportLongImage,
+    onReady: function (fn) { return onStudio('ready', fn); },
+    onChange: function (fn) { return onStudio('change', fn); }
+  };
+  if (embedMode) document.documentElement.classList.add('yt-embed');
+
   buildPicker();
   buildLevelPicker();
   buildColorPicker();
   setPreviewWidth(previewWidth);
-  editor.value = SAMPLE_MD;
-  try {
+  editor.value = embedMode ? '' : SAMPLE_MD;
+  if (!embedMode) try {
     var handoffMd = localStorage.getItem('yth.create.handoff') || '';
     if (handoffMd.trim()) {
       localStorage.removeItem('yth.create.handoff');
@@ -732,5 +801,9 @@
       toast('已载入 AI 创作的文章，选一套主题即可复制');
     }
   } catch (error) { /* 隐私模式等场景回落到示例文章 */ }
-  convert().catch(function () {});
+  convert().catch(function () {}).then(function () {
+    studioReady = true;
+    emitStudio('ready', studioState(Validator.validate(state.html), null));
+    window.dispatchEvent(new CustomEvent('yituo:ready'));
+  });
 })();
